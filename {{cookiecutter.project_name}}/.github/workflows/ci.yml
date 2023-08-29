@@ -1,3 +1,4 @@
+{% raw -%}
 name: CI
 
 concurrency:
@@ -66,7 +67,44 @@ jobs:
 
       - name: Coverage
         uses: codecov/codecov-action@v3
+{% endraw -%}
+{% if cookiecutter.generate_docs %}
+  docs:
+    name: Generate Docs
+    needs: test
+    if: success() && github.event_name != 'schedule'
+    runs-on: ubuntu-latest
 
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.x"
+
+      - name: Install dependencies
+        working-directory: ./docs
+        run: |
+          pip install -U pip
+          pip install -r requirements.txt
+
+      - name: Build the book
+        working-directory: ./docs
+        run: |
+          jupyter-book build .
+
+      - name: GitHub Pages
+        uses: peaceiris/actions-gh-pages@v3
+        with:
+          {% raw -%}
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          {% endraw -%}
+          publish_dir: ./docs/_build/html
+{% endif -%}
+{% raw %}
   deploy:
     name: Deploy
     needs: test
@@ -98,3 +136,4 @@ jobs:
       - uses: softprops/action-gh-release@v1
         with:
           generate_release_notes: true
+{% endraw -%}
